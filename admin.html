@@ -580,13 +580,21 @@ function uploadFile(bucket, path, file, onProgress) {
     xhr.open('POST', `${SB_URL}/storage/v1/object/${bucket}/${path}`);
     xhr.setRequestHeader('apikey', SB_KEY);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.setRequestHeader('x-upsert', 'true');
     if (onProgress) xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100));
     });
-    xhr.onload = () => xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(`Upload ${xhr.status}: ${xhr.responseText}`));
-    xhr.onerror = () => reject(new Error('Network error'));
-    const fd = new FormData(); fd.append('', file);
-    xhr.send(fd);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+      } else {
+        reject(new Error(`Storage ${xhr.status}: ${xhr.responseText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    // Send raw file bytes — NOT FormData
+    xhr.send(file);
   });
 }
 
