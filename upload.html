@@ -754,9 +754,9 @@ function buildClient(url, key) {
         else reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`));
       };
       xhr.onerror = () => reject(new Error('Network error'));
-      const fd = new FormData();
-      fd.append('', file);
-      xhr.send(fd);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.setRequestHeader('x-upsert', 'true');
+      xhr.send(file);
     });
   }
 
