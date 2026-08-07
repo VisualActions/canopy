@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canopy — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080808;--bg2:#101010;--bg3:#181818;--bg4:#1e1e1e;--border:#2a2a2a;--border2:#383838;--text:#f0ede6;--text2:#a09d96;--text3:#55524e;--red:#e50914;--gold:#e5a00d;--gold2:#f5b82e;--gold-glow:rgba(229,160,13,.25);--green:#2ecc71;--font-display:'Bebas Neue',sans-serif;--font-body:'Outfit',sans-serif;--nav-h:60px;--sidebar-w:220px}
+html{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:13px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.sidebar-logo a{font-family:var(--font-display);font-size:24px;letter-spacing:.08em;color:var(--gold);text-shadow:0 0 30px var(--gold-glow);text-decoration:none}
+.sidebar-logo a span{color:var(--red)}
+.sidebar-logo .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--red);color:#fff;padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:middle}
+.nav-section{padding:16px 0 8px}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:0 20px;margin-bottom:4px;display:block}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 20px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);transition:all .12s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--gold);border-left-color:var(--gold);background:rgba(229,160,13,.06)}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)}
+.user-email{font-weight:500;color:var(--text2);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-signout{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text3);padding:5px 12px;cursor:pointer;font-family:var(--font-body);font-size:11px;width:100%;transition:all .15s}
+.btn-signout:hover{border-color:var(--red);color:var(--red)}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto}
+.page{display:none;padding:32px 40px 80px}
+.page.active{display:block}
+
+/* PAGE HEADER */
+.page-header{margin-bottom:28px}
+.page-title{font-family:var(--font-display);font-size:32px;letter-spacing:.04em;color:var(--text);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text3)}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.stat-val{font-family:var(--font-display);font-size:32px;letter-spacing:-.02em;color:var(--text);margin-bottom:3px}
+.stat-label{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.stat-card.gold .stat-val{color:var(--gold)}
+.stat-card.red .stat-val{color:var(--red)}
+.stat-card.green .stat-val{color:var(--green)}
+
+/* TABLES */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.table-title{font-size:13px;font-weight:600;color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)}
+td{padding:11px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+td:first-child{color:var(--text);font-weight:500}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.thumb-cell{display:flex;align-items:center;gap:10px}
+.thumb-sm{width:48px;height:27px;object-fit:cover;border-radius:4px;background:var(--bg3);flex-shrink:0}
+.thumb-placeholder{width:48px;height:27px;background:var(--bg3);border-radius:4px;flex-shrink:0}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em}
+.badge-green{background:rgba(46,204,113,.12);color:var(--green)}
+.badge-red{background:rgba(229,9,20,.12);color:var(--red)}
+.badge-gold{background:rgba(229,160,13,.12);color:var(--gold)}
+.badge-gray{background:var(--bg3);color:var(--text3)}
+
+/* BUTTONS */
+.btn-sm{padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-family:var(--font-body);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-sm:hover{border-color:var(--gold);color:var(--gold)}
+.btn-sm.red:hover{border-color:var(--red);color:var(--red)}
+.btn-primary{padding:9px 20px;border-radius:8px;background:var(--red);border:none;color:#fff;font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary:hover{background:#ff1a24;box-shadow:0 4px 16px rgba(229,9,20,.3)}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.form-field{margin-bottom:0}
+.form-field.full{grid-column:1/-1}
+.form-field label{display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.form-field input,.form-field select,.form-field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none;transition:all .15s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(229,160,13,.1)}
+.form-field input::placeholder,.form-field textarea::placeholder{color:var(--text3)}
+.form-field textarea{resize:vertical;min-height:70px}
+.form-field select option{background:var(--bg3)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;width:min(600px,94vw);max-height:90vh;overflow-y:auto;transform:scale(.96);transition:transform .2s}
+.modal-overlay.open .modal{transform:scale(1)}
+.modal-title{font-family:var(--font-display);font-size:24px;letter-spacing:.04em;color:var(--text);margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:11px 18px;font-size:12px;color:var(--text2);z-index:600;transition:transform .3s;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:rgba(46,204,113,.3);color:var(--green)}
+#toast.error{border-color:rgba(229,9,20,.3);color:#ff6b6b}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.spinner{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <a href="index.html">CAN<span>O</span>PY</a>
+    <span class="badge">ADMIN</span>
+  </div>
+  <div class="nav-section">
+    <span class="nav-label">Content</span>
+    <div class="nav-item active" data-page="dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-page="videos">
+      <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Videos
+    </div>
+    <div class="nav-item" data-page="upload">
+      <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      Upload Video
+    </div>
+  </div>
+  <div class="nav-section">
+    <span class="nav-label">Users</span>
+    <div class="nav-item" data-page="users">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Users
+    </div>
+    <div class="nav-item" data-page="purchases">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
+      Purchases
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-email" id="user-email">Loading...</div>
+    <button class="btn-signout" onclick="signOut()">Sign out</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Canopy platform overview</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card gold"><div class="stat-val" id="s-videos">—</div><div class="stat-label">Total videos</div></div>
+      <div class="stat-card"><div class="stat-val" id="s-views">—</div><div class="stat-label">Total views</div></div>
+      <div class="stat-card green"><div class="stat-val" id="s-users">—</div><div class="stat-label">Registered users</div></div>
+      <div class="stat-card red"><div class="stat-val" id="s-revenue">—</div><div class="stat-label">Total revenue</div></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><div class="table-title">Recent uploads</div></div>
+      <table><thead><tr><th>Title</th><th>Genre</th><th>Price</th><th>Views</th><th>Status</th><th>Published</th></tr></thead>
+      <tbody id="recent-tbody"><tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- VIDEOS -->
+  <div class="page" id="page-videos">
+    <div class="page-header">
+      <div class="page-title">Videos</div>
+      <div class="page-sub">Manage all Canopy content</div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-title">All videos</div>
+        <button class="btn-primary" onclick="showPage('upload')">+ Upload new</button>
+      </div>
+      <table><thead><tr><th>Title</th><th>Type</th><th>Price</th><th>Rating</th><th>Views</th><th>Visibility</th><th>Actions</th></tr></thead>
+      <tbody id="videos-tbody"><tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="page" id="page-upload">
+    <div class="page-header">
+      <div class="page-title">Upload Video</div>
+      <div class="page-sub">Add new content to Canopy</div>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:800px">
+      <!-- Drop zone -->
+      <div id="drop-zone" style="border:2px dashed var(--border2);border-radius:10px;padding:40px;text-align:center;cursor:pointer;margin-bottom:24px;transition:all .2s" onclick="document.getElementById('vid-file').click()">
+        <input type="file" id="vid-file" accept="video/*" style="display:none" onchange="handleVideoFile(this.files[0])">
+        <div id="drop-label">
+          <div style="font-size:32px;margin-bottom:8px">🎬</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Drop video file here</div>
+          <div style="font-size:12px;color:var(--text3)">MP4, MOV, MKV, WebM — or click to browse</div>
+        </div>
+        <div id="drop-selected" style="display:none">
+          <div style="font-size:14px;font-weight:600;color:var(--green)" id="drop-filename"></div>
+          <div style="font-size:12px;color:var(--text3)" id="drop-filesize"></div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field full"><label>Title *</label><input type="text" id="u-title" placeholder="Enter video title"></div>
+        <div class="form-field full"><label>Description</label><textarea id="u-desc" placeholder="What's this video about?"></textarea></div>
+        <div class="form-field"><label>Genre</label>
+          <select id="u-genre"><option value="">Select genre...</option><option>Action</option><option>Adventure</option><option>Animation</option><option>Comedy</option><option>Crime</option><option>Documentary</option><option>Drama</option><option>Fantasy</option><option>Horror</option><option>Music</option><option>Mystery</option><option>Romance</option><option>Sci-Fi</option><option>Short Film</option><option>Thriller</option><option>Western</option><option>Other</option></select>
+        </div>
+        <div class="form-field"><label>Content type</label>
+          <select id="u-type"><option value="movie">Movie</option><option value="episode">TV Episode</option><option value="short">Short Film</option><option value="documentary">Documentary</option><option value="vlog">Vlog</option><option value="other">Other</option></select>
+        </div>
+        <div class="form-field"><label>Release year</label><input type="number" id="u-year" placeholder="2024" min="1888" max="2099"></div>
+        <div class="form-field"><label>Runtime (min)</label><input type="number" id="u-runtime" placeholder="Auto-detected"></div>
+        <div class="form-field"><label>Director</label><input type="text" id="u-director" placeholder="Christopher Nolan"></div>
+        <div class="form-field"><label>Studio</label><input type="text" id="u-studio" placeholder="Warner Bros."></div>
+        <div class="form-field"><label>Country</label><input type="text" id="u-country" placeholder="USA"></div>
+        <div class="form-field"><label>Language</label><input type="text" id="u-lang" placeholder="English" value="English"></div>
+        <div class="form-field"><label>Content rating</label>
+          <select id="u-rating"><option value="G">G</option><option value="PG">PG</option><option value="PG-13" selected>PG-13</option><option value="R">R</option><option value="NC-17">NC-17</option><option value="NR">NR</option></select>
+        </div>
+        <div class="form-field"><label>Visibility</label>
+          <select id="u-vis"><option value="public">Public</option><option value="unlisted">Unlisted</option><option value="private">Private</option></select>
+        </div>
+        <div class="form-field"><label>Price (USD) — 0 = free</label><input type="number" id="u-price" placeholder="0.00" min="0" step="0.01" value="0"></div>
+        <div class="form-field"><label>IMDb URL</label><input type="url" id="u-imdb" placeholder="https://imdb.com/title/tt..."></div>
+        <div class="form-field full"><label>Trailer URL</label><input type="url" id="u-trailer" placeholder="https://youtube.com/watch?v=..."></div>
+        <div class="form-field full"><label>Tags (comma-separated)</label><input type="text" id="u-tags" placeholder="action, thriller, 2024"></div>
+        <div class="form-field full"><label>Thumbnail</label>
+          <input type="file" id="u-thumb" accept="image/*" style="background:transparent;border:1px dashed var(--border2);padding:8px">
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="upload-progress" style="display:none;margin-bottom:16px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px" id="prog-label">Uploading video...</div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div id="prog-bar" style="height:100%;background:linear-gradient(90deg,var(--red),var(--gold));width:0%;transition:width .3s;border-radius:2px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="prog-pct">0%</div>
+      </div>
+
+      <div id="upload-error" style="display:none;background:rgba(229,9,20,.1);border:1px solid rgba(229,9,20,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#ff6b6b;margin-bottom:14px"></div>
+      <div id="upload-success" style="display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:14px"></div>
+
+      <button class="btn-primary" id="btn-upload" onclick="doUpload()" style="min-width:160px">Upload to Canopy</button>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="page" id="page-users">
+    <div class="page-header">
+      <div class="page-title">Users</div>
+      <div class="page-sub">All registered Canopy accounts</div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><div class="table-title">All users</div></div>
+      <table><thead><tr><th>Email</th><th>Display name</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
+      <tbody id="users-tbody"><tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- PURCHASES -->
+  <div class="page" id="page-purchases">
+    <div class="page-header">
+      <div class="page-title">Purchases</div>
+      <div class="page-sub">All payment transactions (prototype — all approved)</div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><div class="table-title">All purchases</div></div>
+      <table><thead><tr><th>User</th><th>Video</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody id="purchases-tbody"><tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr></tbody></table>
+    </div>
+  </div>
+
+</main>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const SB_URL = 'https://yddfumooqyvukasfsygh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZGZ1bW9vcXl2dWthc2ZzeWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODY1NTcsImV4cCI6MjEwMTM2MjU1N30.okmglJ8O-5jdRPfA7eIf4d4nin27pS3t8O8yPNmbopA';
+
+let token = localStorage.getItem('canopy_token');
+let selectedVideoFile = null;
+let selectedThumbFile = null;
+
+// Auth guard
+async function checkAuth() {
+  if (!token) { window.location.href = 'auth.html'; return; }
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/profiles?select=*`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` }
+    });
+    const profiles = await r.json();
+    const me = profiles[0];
+    if (!me || me.role !== 'admin') {
+      alert('Admin access required.');
+      window.location.href = 'index.html';
+      return;
+    }
+    document.getElementById('user-email').textContent = me.email || 'Admin';
+  } catch { window.location.href = 'auth.html'; }
+}
+
+function authHeaders() {
+  return { apikey: SB_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: authHeaders(), ...opts });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.message || JSON.stringify(j));
+  return j;
+}
+
+// NAV
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => showPage(item.dataset.page));
+});
+
+function showPage(name) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === name));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  else if (name === 'videos') loadVideos();
+  else if (name === 'users') loadUsers();
+  else if (name === 'purchases') loadPurchases();
+}
+
+// DASHBOARD
+async function loadDashboard() {
+  try {
+    const [videos, users, purchases] = await Promise.all([
+      api('canopy_videos?select=id,view_count,status,title,genre,price,content_rating,visibility,published_at,thumbnail_url&order=published_at.desc&limit=50'),
+      api('profiles?select=id'),
+      api('purchases?select=amount,status')
+    ]);
+
+    document.getElementById('s-videos').textContent = videos.length;
+    document.getElementById('s-views').textContent = fmtNum(videos.reduce((a,v) => a+(v.view_count||0), 0));
+    document.getElementById('s-users').textContent = users.length;
+    const rev = purchases.filter(p=>p.status==='succeeded').reduce((a,p)=>a+(p.amount||0),0);
+    document.getElementById('s-revenue').textContent = '$'+rev.toFixed(2);
+
+    const tbody = document.getElementById('recent-tbody');
+    tbody.innerHTML = videos.slice(0,10).map(v => `
+      <tr>
+        <td><div class="thumb-cell">${v.thumbnail_url?`<img class="thumb-sm" src="${esc(v.thumbnail_url)}" alt="">`:'<div class="thumb-placeholder"></div>'}<span>${esc(v.title)}</span></div></td>
+        <td>${esc(v.genre||'—')}</td>
+        <td>${v.price>0?'$'+parseFloat(v.price).toFixed(2):'<span class="badge badge-green">Free</span>'}</td>
+        <td>${fmtNum(v.view_count||0)}</td>
+        <td><span class="badge ${v.status==='ready'?'badge-green':v.status==='processing'?'badge-gold':'badge-red'}">${v.status}</span></td>
+        <td>${fmtDate(v.published_at)}</td>
+      </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">No videos yet</td></tr>';
+  } catch(e) { showToast('Error loading dashboard: '+e.message, 'error'); }
+}
+
+// VIDEOS
+async function loadVideos() {
+  try {
+    const videos = await api('canopy_videos?select=*&order=published_at.desc');
+    const tbody = document.getElementById('videos-tbody');
+    tbody.innerHTML = videos.map(v => `
+      <tr>
+        <td><div class="thumb-cell">${v.thumbnail_url?`<img class="thumb-sm" src="${esc(v.thumbnail_url)}" alt="">`:'<div class="thumb-placeholder"></div>'}<span>${esc(v.title)}</span></div></td>
+        <td>${esc(v.content_type||'—')}</td>
+        <td>${v.price>0?'$'+parseFloat(v.price).toFixed(2):'<span class="badge badge-green">Free</span>'}</td>
+        <td>${esc(v.content_rating||'—')}</td>
+        <td>${fmtNum(v.view_count||0)}</td>
+        <td><span class="badge ${v.visibility==='public'?'badge-green':v.visibility==='unlisted'?'badge-gold':'badge-gray'}">${v.visibility}</span></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="toggleVisibility('${v.id}','${v.visibility}')">${v.visibility==='public'?'Unpublish':'Publish'}</button>
+          <button class="btn-sm red" onclick="deleteVideo('${v.id}','${esc(v.title)}')">Delete</button>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">No videos yet</td></tr>';
+  } catch(e) { showToast('Error loading videos: '+e.message, 'error'); }
+}
+
+async function toggleVisibility(id, current) {
+  const next = current === 'public' ? 'private' : 'public';
+  try {
+    await api(`canopy_videos?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ visibility: next }) });
+    showToast(`Video ${next === 'public' ? 'published' : 'unpublished'}`, 'success');
+    loadVideos();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function deleteVideo(id, title) {
+  if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  try {
+    await api(`canopy_videos?id=eq.${id}`, { method: 'DELETE' });
+    showToast('Video deleted', 'success');
+    loadVideos();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// USERS
+async function loadUsers() {
+  try {
+    const users = await api('profiles?select=*&order=created_at.desc');
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${esc(u.email||'—')}</td>
+        <td>${esc(u.display_name||'—')}</td>
+        <td><span class="badge ${u.role==='admin'?'badge-gold':'badge-gray'}">${u.role}</span></td>
+        <td>${fmtDate(u.created_at)}</td>
+        <td><button class="btn-sm" onclick="toggleAdmin('${u.id}','${u.role}')">${u.role==='admin'?'Remove admin':'Make admin'}</button></td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No users yet</td></tr>';
+  } catch(e) { showToast('Error loading users: '+e.message, 'error'); }
+}
+
+async function toggleAdmin(id, role) {
+  const next = role === 'admin' ? 'viewer' : 'admin';
+  if (!confirm(`Change role to ${next}?`)) return;
+  try {
+    await api(`profiles?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ role: next }) });
+    showToast(`Role updated to ${next}`, 'success');
+    loadUsers();
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+// PURCHASES
+async function loadPurchases() {
+  try {
+    const purchases = await api('purchases?select=*,canopy_videos(title),profiles(email)&order=created_at.desc');
+    const tbody = document.getElementById('purchases-tbody');
+    tbody.innerHTML = purchases.map(p => `
+      <tr>
+        <td>${esc(p.profiles?.email||'—')}</td>
+        <td>${esc(p.canopy_videos?.title||'—')}</td>
+        <td>$${parseFloat(p.amount).toFixed(2)}</td>
+        <td><span class="badge badge-green">${p.status}</span></td>
+        <td>${fmtDate(p.created_at)}</td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No purchases yet</td></tr>';
+  } catch(e) { showToast('Error loading purchases: '+e.message, 'error'); }
+}
+
+// UPLOAD
+function handleVideoFile(file) {
+  if (!file) return;
+  selectedVideoFile = file;
+  document.getElementById('drop-label').style.display = 'none';
+  document.getElementById('drop-selected').style.display = 'block';
+  document.getElementById('drop-filename').textContent = file.name;
+  document.getElementById('drop-filesize').textContent = fmtBytes(file.size);
+  document.getElementById('drop-zone').style.borderColor = 'var(--green)';
+  // Auto-detect runtime
+  const vid = document.createElement('video');
+  vid.src = URL.createObjectURL(file);
+  vid.onloadedmetadata = () => {
+    document.getElementById('u-runtime').value = Math.round(vid.duration / 60);
+  };
+}
+
+document.getElementById('drop-zone').addEventListener('dragover', e => { e.preventDefault(); e.currentTarget.style.borderColor='var(--gold)'; });
+document.getElementById('drop-zone').addEventListener('dragleave', e => { e.currentTarget.style.borderColor='var(--border2)'; });
+document.getElementById('drop-zone').addEventListener('drop', e => { e.preventDefault(); e.currentTarget.style.borderColor='var(--border2)'; if(e.dataTransfer.files[0]) handleVideoFile(e.dataTransfer.files[0]); });
+
+async function doUpload() {
+  const title = document.getElementById('u-title').value.trim();
+  if (!selectedVideoFile) { showUploadMsg('Select a video file first.', 'error'); return; }
+  if (!title) { showUploadMsg('Title is required.', 'error'); return; }
+
+  const btn = document.getElementById('btn-upload');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('upload-error').style.display = 'none';
+  document.getElementById('upload-success').style.display = 'none';
+
+  try {
+    const id  = crypto.randomUUID();
+    const ext = selectedVideoFile.name.split('.').pop();
+
+    // Upload video
+    await uploadFile('canopy-videos', `videos/${id}.${ext}`, selectedVideoFile, pct => {
+      document.getElementById('prog-bar').style.width = pct + '%';
+      document.getElementById('prog-pct').textContent = pct + '%';
+      document.getElementById('prog-label').textContent = `Uploading video... ${pct}%`;
+    });
+    const videoUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/videos/${id}.${ext}`;
+
+    // Upload thumb
+    let thumbUrl = null;
+    const thumbFile = document.getElementById('u-thumb').files[0];
+    if (thumbFile) {
+      document.getElementById('prog-label').textContent = 'Uploading thumbnail...';
+      const tExt = thumbFile.name.split('.').pop();
+      await uploadFile('canopy-videos', `thumbnails/${id}.${tExt}`, thumbFile, null);
+      thumbUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/thumbnails/${id}.${tExt}`;
+    }
+
+    // Build tags array
+    const tagsRaw = document.getElementById('u-tags').value;
+    const tags = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(Boolean) : [];
+
+    const price = parseFloat(document.getElementById('u-price').value) || 0;
+
+    document.getElementById('prog-label').textContent = 'Saving metadata...';
+    document.getElementById('prog-bar').style.width = '100%';
+
+    // Insert row
+    const row = {
+      id, title,
+      description:     document.getElementById('u-desc').value.trim() || null,
+      genre:           document.getElementById('u-genre').value || null,
+      content_type:    document.getElementById('u-type').value,
+      release_year:    parseInt(document.getElementById('u-year').value) || null,
+      runtime_minutes: parseInt(document.getElementById('u-runtime').value) || null,
+      director:        document.getElementById('u-director').value.trim() || null,
+      studio:          document.getElementById('u-studio').value.trim() || null,
+      country:         document.getElementById('u-country').value.trim() || null,
+      language:        document.getElementById('u-lang').value.trim() || 'English',
+      content_rating:  document.getElementById('u-rating').value,
+      visibility:      document.getElementById('u-vis').value,
+      imdb_url:        document.getElementById('u-imdb').value.trim() || null,
+      trailer_url:     document.getElementById('u-trailer').value.trim() || null,
+      price,
+      tags,
+      cast_members:    [],
+      video_url:       videoUrl,
+      thumbnail_url:   thumbUrl,
+      status:          'ready',
+      published_at:    new Date().toISOString(),
+      created_at:      new Date().toISOString(),
+    };
+
+    await fetch(`${SB_URL}/rest/v1/canopy_videos`, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: JSON.stringify(row)
+    });
+
+    showUploadMsg(`"${title}" uploaded successfully!`, 'success');
+    resetUploadForm();
+  } catch(e) {
+    showUploadMsg('Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload to Canopy';
+    document.getElementById('upload-progress').style.display = 'none';
+  }
+}
+
+function showUploadMsg(msg, type) {
+  const errEl = document.getElementById('upload-error');
+  const sucEl = document.getElementById('upload-success');
+  errEl.style.display = 'none';
+  sucEl.style.display = 'none';
+  if (type === 'error') { errEl.textContent = msg; errEl.style.display = 'block'; }
+  else { sucEl.textContent = msg; sucEl.style.display = 'block'; }
+}
+
+function resetUploadForm() {
+  selectedVideoFile = null;
+  document.getElementById('drop-label').style.display = 'block';
+  document.getElementById('drop-selected').style.display = 'none';
+  document.getElementById('drop-zone').style.borderColor = 'var(--border2)';
+  ['u-title','u-desc','u-year','u-runtime','u-director','u-studio','u-country','u-imdb','u-trailer','u-tags'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('u-price').value = '0';
+  document.getElementById('u-lang').value = 'English';
+}
+
+function uploadFile(bucket, path, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${SB_URL}/storage/v1/object/${bucket}/${path}`);
+    xhr.setRequestHeader('apikey', SB_KEY);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    if (onProgress) xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100));
+    });
+    xhr.onload = () => xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error(`Upload ${xhr.status}: ${xhr.responseText}`));
+    xhr.onerror = () => reject(new Error('Network error'));
+    const fd = new FormData(); fd.append('', file);
+    xhr.send(fd);
+  });
+}
+
+function signOut() {
+  localStorage.removeItem('canopy_token');
+  localStorage.removeItem('canopy_refresh');
+  localStorage.removeItem('canopy_user');
+  window.location.href = 'auth.html';
+}
+
+// UTILS
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtNum(n) { if(n>=1e6) return (n/1e6).toFixed(1)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return String(n); }
+function fmtDate(d) { if(!d) return '—'; return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fmtBytes(b) { if(b>1e9) return (b/1e9).toFixed(2)+' GB'; if(b>1e6) return (b/1e6).toFixed(1)+' MB'; return (b/1e3).toFixed(0)+' KB'; }
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = type ? `show ${type}` : 'show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.className='', 3000);
+}
+
+// INIT
+checkAuth().then(() => loadDashboard());
+</script>
+</body>
+</html>
