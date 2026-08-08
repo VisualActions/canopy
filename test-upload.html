@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Canopy Test Upload</title>
+<style>
+body{background:#080808;color:#f0ede6;font-family:monospace;padding:40px;font-size:14px}
+.logo{font-size:36px;color:#e5a00d;margin-bottom:24px;font-family:sans-serif;font-weight:900}
+.logo span{color:#e50914}
+pre{background:#181818;border:1px solid #2a2a2a;border-radius:8px;padding:20px;white-space:pre-wrap;line-height:1.8;max-height:400px;overflow-y:auto}
+.btn{background:#e50914;border:none;color:#fff;padding:12px 28px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;display:block}
+.btn:hover{background:#ff1a24}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.status{margin-top:16px;font-size:13px;color:#a09d96}
+.done{color:#2ecc71;font-size:18px;font-weight:700;margin-top:20px}
+.progress{height:4px;background:#2a2a2a;border-radius:2px;margin:12px 0;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#e50914,#e5a00d);width:0%;transition:width .3s;border-radius:2px}
+</style>
+</head>
+<body>
+<div class="logo">CAN<span>O</span>PY</div>
+<h2 style="margin-bottom:8px;color:#e5a00d">Test Video Uploader</h2>
+<p style="color:#55524e;margin-bottom:24px;font-size:13px">This page auto-uploads the Canopy test video using the EXACT same method as upload.html — raw XHR bytes to Supabase Storage, then REST insert to canopy_videos. One-time use.</p>
+
+<button class="btn" id="btn" onclick="runUpload()">▶ Upload Canopy Test Video</button>
+<div class="progress"><div class="progress-fill" id="prog"></div></div>
+<div class="status" id="status">Click to start upload</div>
+<pre id="log">Waiting...</pre>
+<div class="done" id="done" style="display:none">✓ Test video uploaded! <a href="index.html" style="color:#e5a00d">Go to Canopy →</a></div>
+
+<script>
+const SB_URL = 'https://yddfumooqyvukasfsygh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZGZ1bW9vcXl2dWthc2ZzeWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODY1NTcsImV4cCI6MjEwMTM2MjU1N30.okmglJ8O-5jdRPfA7eIf4d4nin27pS3t8O8yPNmbopA';
+
+const log = document.getElementById('log');
+const prog = document.getElementById('prog');
+const status = document.getElementById('status');
+
+function addLog(msg) {
+  log.textContent = log.textContent === 'Waiting...' ? msg : log.textContent + '\n' + msg;
+  log.scrollTop = log.scrollHeight;
+  console.log(msg);
+}
+
+function setProgress(pct) {
+  prog.style.width = pct + '%';
+  status.textContent = pct + '% complete';
+}
+
+function uploadRaw(url, data, contentType, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.setRequestHeader('apikey', SB_KEY);
+    xhr.setRequestHeader('Authorization', `Bearer ${SB_KEY}`);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.setRequestHeader('x-upsert', 'true');
+    if (onProgress) xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100));
+    });
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+      } else {
+        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    // SEND RAW BYTES — same as upload.html
+    xhr.send(data);
+  });
+}
+
+async function runUpload() {
+  document.getElementById('btn').disabled = true;
+  log.textContent = '';
+
+  const id = crypto.randomUUID();
+  addLog(`Video ID: ${id}`);
+
+  try {
+    // Step 1: Fetch the test video from a reliable CDN
+    addLog('Step 1: Fetching test video (Big Buck Bunny clip)...');
+    setProgress(5);
+
+    // Use a CORS-friendly public domain MP4
+    const videoResp = await fetch('https://www.w3schools.com/html/mov_bbb.mp4');
+    if (!videoResp.ok) throw new Error('Could not fetch test video');
+    const videoBlob = await videoResp.blob();
+    addLog(`Video fetched: ${(videoBlob.size/1024).toFixed(0)} KB, type: ${videoBlob.type}`);
+    setProgress(20);
+
+    // Step 2: Fetch a thumbnail
+    addLog('Step 2: Fetching thumbnail...');
+    const thumbResp = await fetch('https://peach.blender.org/wp-content/uploads/bbb-splash.png').catch(() => null);
+    let thumbBlob = null;
+    if (thumbResp && thumbResp.ok) {
+      thumbBlob = await thumbResp.blob();
+      addLog(`Thumbnail fetched: ${(thumbBlob.size/1024).toFixed(0)} KB`);
+    } else {
+      addLog('Thumbnail fetch skipped (CORS) — will use null');
+    }
+    setProgress(30);
+
+    // Step 3: Upload video to Supabase Storage (RAW BYTES — same as upload.html)
+    addLog('Step 3: Uploading video to Supabase Storage...');
+    const videoUpload = await uploadRaw(
+      `${SB_URL}/storage/v1/object/canopy-videos/videos/${id}.mp4`,
+      videoBlob,
+      videoBlob.type || 'video/mp4',
+      pct => setProgress(30 + Math.round(pct * 0.5))
+    );
+    addLog(`Video storage result: ${JSON.stringify(videoUpload)}`);
+    setProgress(80);
+
+    const videoUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/videos/${id}.mp4`;
+
+    // Step 4: Upload thumbnail if we have it
+    let thumbUrl = null;
+    if (thumbBlob) {
+      addLog('Step 4: Uploading thumbnail...');
+      await uploadRaw(
+        `${SB_URL}/storage/v1/object/canopy-videos/thumbnails/${id}.jpg`,
+        thumbBlob,
+        'image/jpeg',
+        null
+      ).catch(e => addLog('Thumb upload failed (non-fatal): ' + e.message));
+      thumbUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/thumbnails/${id}.jpg`;
+      addLog('Thumbnail uploaded');
+    }
+    setProgress(90);
+
+    // Step 5: Insert metadata row (same as upload.html REST POST)
+    addLog('Step 5: Inserting metadata into canopy_videos...');
+    const row = {
+      id,
+      title: 'Canopy Test Video',
+      description: 'Big Buck Bunny short clip — public domain test video to verify the Canopy upload pipeline works end to end.',
+      genre: 'Animation',
+      content_type: 'short',
+      release_year: 2008,
+      runtime_minutes: 1,
+      director: 'Sacha Goedegebure',
+      studio: 'Blender Foundation',
+      country: 'Netherlands',
+      language: 'English',
+      content_rating: 'G',
+      visibility: 'public',
+      price: 0,
+      tags: ['test', 'canopy', 'big-buck-bunny', 'animation', 'public-domain'],
+      cast_members: [],
+      video_url: videoUrl,
+      thumbnail_url: thumbUrl,
+      status: 'ready',
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+
+    const metaResp = await fetch(`${SB_URL}/rest/v1/canopy_videos`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(row)
+    });
+    const metaResult = await metaResp.json();
+    if (!metaResp.ok) throw new Error('Metadata insert failed: ' + JSON.stringify(metaResult));
+    addLog(`Metadata inserted: ${metaResult[0]?.id}`);
+    addLog(`Video URL: ${videoUrl}`);
+    setProgress(100);
+    status.textContent = 'Upload complete!';
+    document.getElementById('done').style.display = 'block';
+
+  } catch(e) {
+    addLog(`ERROR: ${e.message}`);
+    status.textContent = 'Upload failed — see log';
+    document.getElementById('btn').disabled = false;
+    document.getElementById('btn').textContent = '↺ Retry';
+  }
+}
+</script>
+</body>
+</html>
