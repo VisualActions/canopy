@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canopy — Export Metadata</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080808;--bg2:#101010;--bg3:#181818;--border:#2a2a2a;--border2:#383838;--text:#f0ede6;--text2:#a09d96;--text3:#55524e;--red:#e50914;--gold:#e5a00d;--gold-glow:rgba(229,160,13,.3);--green:#2ecc71;--font-display:'Bebas Neue',sans-serif;--font-body:'Outfit',sans-serif}
+html{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding:40px 24px 80px;max-width:900px;margin:0 auto}
+
+.logo{font-family:var(--font-display);font-size:32px;letter-spacing:.08em;color:var(--gold);text-shadow:0 0 30px var(--gold-glow);margin-bottom:4px}
+.logo span{color:var(--red)}
+.logo a{text-decoration:none;color:inherit}
+.subtitle{font-size:13px;color:var(--text3);margin-bottom:36px}
+
+h1{font-family:var(--font-display);font-size:36px;letter-spacing:.04em;color:var(--text);margin-bottom:6px}
+.desc{font-size:13px;color:var(--text3);margin-bottom:32px;line-height:1.6}
+
+.export-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:32px}
+.export-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:20px 24px;cursor:pointer;transition:all .18s}
+.export-card:hover{border-color:var(--gold);background:rgba(229,160,13,.04)}
+.export-card h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.export-card p{font-size:12px;color:var(--text3);line-height:1.55}
+.export-icon{font-size:20px}
+.export-btn{width:100%;padding:11px;border-radius:8px;border:none;font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;margin-top:14px;transition:all .15s}
+.btn-gold{background:var(--gold);color:#000}
+.btn-gold:hover{background:#f5b82e}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#ff1a24}
+.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+
+.stats-row{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;flex:1;min-width:120px}
+.stat-val{font-family:var(--font-display);font-size:28px;color:var(--gold);line-height:1}
+.stat-label{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+
+.log{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;color:var(--text2);max-height:200px;overflow-y:auto;margin-top:16px;display:none;line-height:1.7;font-family:monospace}
+.log.show{display:block}
+.success-bar{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--green);margin-top:12px;display:none}
+.success-bar.show{display:flex;align-items:center;gap:10px;justify-content:space-between}
+
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+.preview-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.preview-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview-table td:first-child{color:var(--text);font-weight:500}
+.preview-table tr:last-child td{border-bottom:none}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;display:none;max-height:360px;overflow-y:auto}
+.table-wrap.show{display:block}
+
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="logo"><a href="index.html">CAN<span>O</span>PY</a></div>
+<div class="subtitle">Metadata Export & Backup</div>
+
+<h1>Export & Backup</h1>
+<p class="desc">Download all Canopy video metadata as JSON or CSV for backups, migration, or external use. Video files themselves live in Supabase Storage — this exports the database records only.</p>
+
+<div class="stats-row">
+  <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-label">Total videos</div></div>
+  <div class="stat"><div class="stat-val" id="s-public">—</div><div class="stat-label">Public</div></div>
+  <div class="stat"><div class="stat-val" id="s-free">—</div><div class="stat-label">Free</div></div>
+  <div class="stat"><div class="stat-val" id="s-paid">—</div><div class="stat-label">Paid</div></div>
+</div>
+
+<div class="export-grid">
+
+  <div class="export-card">
+    <h3><span class="export-icon">📦</span> Full JSON Backup</h3>
+    <p>All metadata fields for every video. Ideal for full database restore, migration to another project, or version control backup.</p>
+    <button class="export-btn btn-gold" onclick="exportJSON()">Download full_backup.json</button>
+  </div>
+
+  <div class="export-card">
+    <h3><span class="export-icon">📊</span> CSV Spreadsheet</h3>
+    <p>All videos in a flat CSV. Open in Excel, Google Sheets, or import to another database. Includes all metadata fields.</p>
+    <button class="export-btn btn-outline" onclick="exportCSV()">Download metadata.csv</button>
+  </div>
+
+  <div class="export-card">
+    <h3><span class="export-icon">🎬</span> Public Videos Only</h3>
+    <p>Export only public, published videos. Useful for sharing the catalog or building an external search index.</p>
+    <button class="export-btn btn-outline" onclick="exportPublic()">Download public_catalog.json</button>
+  </div>
+
+  <div class="export-card">
+    <h3><span class="export-icon">🔗</span> URL List</h3>
+    <p>Plain text list of all video URLs and thumbnail URLs. Useful for CDN audits, re-uploading, or checking broken links.</p>
+    <button class="export-btn btn-outline" onclick="exportURLs()">Download video_urls.txt</button>
+  </div>
+
+</div>
+
+<div id="log" class="log"></div>
+<div id="success-bar" class="success-bar">
+  <span id="success-msg">Export ready</span>
+  <span style="font-size:11px;color:var(--text3)" id="export-time"></span>
+</div>
+
+<!-- Preview table -->
+<div id="table-wrap" class="table-wrap">
+  <table class="preview-table">
+    <thead><tr><th>Title</th><th>Type</th><th>Genre</th><th>Price</th><th>Views</th><th>Status</th><th>Published</th></tr></thead>
+    <tbody id="preview-tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const SB_URL = 'https://yddfumooqyvukasfsygh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZGZ1bW9vcXl2dWthc2ZzeWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODY1NTcsImV4cCI6MjEwMTM2MjU1N30.okmglJ8O-5jdRPfA7eIf4d4nin27pS3t8O8yPNmbopA';
+
+let allVideos = [];
+const logEl = document.getElementById('log');
+const successBar = document.getElementById('success-bar');
+
+function log(msg) {
+  logEl.classList.add('show');
+  logEl.textContent += (logEl.textContent ? '\n' : '') + msg;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function showSuccess(msg) {
+  document.getElementById('success-msg').textContent = msg;
+  document.getElementById('export-time').textContent = new Date().toLocaleString();
+  successBar.classList.add('show');
+}
+
+async function loadVideos() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/canopy_videos?select=*&order=published_at.desc&limit=1000`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(data));
+    allVideos = data;
+
+    document.getElementById('s-total').textContent = data.length;
+    document.getElementById('s-public').textContent = data.filter(v=>v.visibility==='public').length;
+    document.getElementById('s-free').textContent = data.filter(v=>!v.price||v.price==0).length;
+    document.getElementById('s-paid').textContent = data.filter(v=>v.price>0).length;
+
+    // Show preview table
+    const tbody = document.getElementById('preview-tbody');
+    tbody.innerHTML = data.slice(0,20).map(v=>`
+      <tr>
+        <td title="${esc(v.title)}">${esc(v.title)}</td>
+        <td>${v.content_type||'—'}</td>
+        <td>${v.genre||'—'}</td>
+        <td>${v.price>0?'$'+parseFloat(v.price).toFixed(2):'Free'}</td>
+        <td>${v.view_count||0}</td>
+        <td>${v.status||'—'}</td>
+        <td>${v.published_at?new Date(v.published_at).toLocaleDateString():'-'}</td>
+      </tr>`).join('');
+    document.getElementById('table-wrap').classList.add('show');
+    return data;
+  } catch(e) {
+    log('Error loading videos: ' + e.message);
+    return [];
+  }
+}
+
+function download(filename, content, type='application/json') {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function exportJSON() {
+  log('Fetching all video metadata...');
+  const videos = allVideos.length ? allVideos : await loadVideos();
+  const backup = {
+    exported_at: new Date().toISOString(),
+    project: 'canopy',
+    supabase_project: 'yddfumooqyvukasfsygh',
+    total_videos: videos.length,
+    videos
+  };
+  const json = JSON.stringify(backup, null, 2);
+  download(`canopy_full_backup_${datestamp()}.json`, json);
+  log(`Exported ${videos.length} videos as JSON (${(json.length/1024).toFixed(1)} KB)`);
+  showSuccess(`Full backup downloaded — ${videos.length} videos`);
+}
+
+async function exportCSV() {
+  const videos = allVideos.length ? allVideos : await loadVideos();
+  const cols = ['id','title','description','genre','content_type','release_year','runtime_minutes','director','studio','country','language','content_rating','visibility','price','view_count','like_count','status','video_url','thumbnail_url','trailer_url','imdb_url','published_at','created_at'];
+  const header = cols.join(',');
+  const rows = videos.map(v => cols.map(c => {
+    const val = v[c];
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g,'""')}"`;
+    const s = String(val);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(','));
+  const csv = [header, ...rows].join('\n');
+  download(`canopy_metadata_${datestamp()}.csv`, csv, 'text/csv');
+  log(`Exported ${videos.length} videos as CSV`);
+  showSuccess(`CSV downloaded — ${videos.length} rows`);
+}
+
+async function exportPublic() {
+  const videos = allVideos.length ? allVideos : await loadVideos();
+  const pub = videos.filter(v => v.visibility === 'public' && v.status === 'ready');
+  const backup = {
+    exported_at: new Date().toISOString(),
+    type: 'public_catalog',
+    total: pub.length,
+    videos: pub.map(v => ({
+      id: v.id, title: v.title, description: v.description,
+      genre: v.genre, content_type: v.content_type, release_year: v.release_year,
+      runtime_minutes: v.runtime_minutes, director: v.director, content_rating: v.content_rating,
+      price: v.price, view_count: v.view_count, thumbnail_url: v.thumbnail_url,
+      video_url: v.video_url, tags: v.tags, published_at: v.published_at
+    }))
+  };
+  download(`canopy_public_catalog_${datestamp()}.json`, JSON.stringify(backup, null, 2));
+  log(`Exported ${pub.length} public videos`);
+  showSuccess(`Public catalog downloaded — ${pub.length} videos`);
+}
+
+async function exportURLs() {
+  const videos = allVideos.length ? allVideos : await loadVideos();
+  const lines = videos.map(v =>
+    `# ${v.title}\nVIDEO: ${v.video_url||'null'}\nTHUMB: ${v.thumbnail_url||'null'}\n`
+  );
+  const txt = `# Canopy URL Export\n# Exported: ${new Date().toISOString()}\n# Total: ${videos.length} videos\n\n` + lines.join('\n');
+  download(`canopy_urls_${datestamp()}.txt`, txt, 'text/plain');
+  log(`Exported ${videos.length} video URLs`);
+  showSuccess(`URL list downloaded — ${videos.length} entries`);
+}
+
+function datestamp() {
+  return new Date().toISOString().slice(0,10).replace(/-/g,'');
+}
+
+function esc(s) { return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Load on start
+loadVideos();
+</script>
+</body>
+</html>
