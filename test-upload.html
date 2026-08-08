@@ -4,47 +4,174 @@
 <meta charset="UTF-8">
 <title>Canopy Test Upload</title>
 <style>
-body{background:#080808;color:#f0ede6;font-family:monospace;padding:40px;font-size:14px}
-.logo{font-size:36px;color:#e5a00d;margin-bottom:24px;font-family:sans-serif;font-weight:900}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080808;color:#f0ede6;font-family:'Outfit',monospace;padding:40px;font-size:14px}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+.logo{font-size:40px;font-weight:900;color:#e5a00d;margin-bottom:4px;letter-spacing:.06em}
 .logo span{color:#e50914}
-pre{background:#181818;border:1px solid #2a2a2a;border-radius:8px;padding:20px;white-space:pre-wrap;line-height:1.8;max-height:400px;overflow-y:auto}
-.btn{background:#e50914;border:none;color:#fff;padding:12px 28px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;display:block}
-.btn:hover{background:#ff1a24}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.status{margin-top:16px;font-size:13px;color:#a09d96}
-.done{color:#2ecc71;font-size:18px;font-weight:700;margin-top:20px}
-.progress{height:4px;background:#2a2a2a;border-radius:2px;margin:12px 0;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,#e50914,#e5a00d);width:0%;transition:width .3s;border-radius:2px}
+h2{font-size:18px;font-weight:600;margin-bottom:8px;margin-top:0;color:#e5a00d}
+p{color:#55524e;margin-bottom:24px;font-size:13px;line-height:1.6;max-width:560px}
+pre{background:#181818;border:1px solid #2a2a2a;border-radius:8px;padding:16px;white-space:pre-wrap;line-height:1.8;max-height:340px;overflow-y:auto;font-size:12px;margin-top:12px;font-family:monospace}
+.btn{background:#e50914;border:none;color:#fff;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;display:inline-block;transition:all .2s}
+.btn:hover{background:#ff1a24;box-shadow:0 6px 20px rgba(229,9,20,.4)}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.progress{height:5px;background:#2a2a2a;border-radius:3px;margin:14px 0;overflow:hidden}
+.bar{height:100%;background:linear-gradient(90deg,#e50914,#e5a00d);width:0%;transition:width .4s;border-radius:3px}
+.status{font-size:13px;color:#a09d96;margin-top:4px}
+.done{color:#2ecc71;font-size:17px;font-weight:700;margin-top:20px;display:none}
+.done a{color:#e5a00d}
+canvas{display:none}
 </style>
 </head>
 <body>
 <div class="logo">CAN<span>O</span>PY</div>
-<h2 style="margin-bottom:8px;color:#e5a00d">Test Video Uploader</h2>
-<p style="color:#55524e;margin-bottom:24px;font-size:13px">This page auto-uploads the Canopy test video using the EXACT same method as upload.html — raw XHR bytes to Supabase Storage, then REST insert to canopy_videos. One-time use.</p>
+<br>
+<h2>Test Video Uploader</h2>
+<p>Generates a real MP4 entirely in the browser using Canvas + MediaRecorder — no external fetches, no CORS issues. Uses the exact same raw-bytes XHR method as upload.html to push to Supabase Storage.</p>
 
-<button class="btn" id="btn" onclick="runUpload()">▶ Upload Canopy Test Video</button>
-<div class="progress"><div class="progress-fill" id="prog"></div></div>
-<div class="status" id="status">Click to start upload</div>
-<pre id="log">Waiting...</pre>
-<div class="done" id="done" style="display:none">✓ Test video uploaded! <a href="index.html" style="color:#e5a00d">Go to Canopy →</a></div>
+<button class="btn" id="btn" onclick="run()">▶ Generate & Upload Test Video</button>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="status" id="status">Ready</div>
+<pre id="log">Waiting for upload...</pre>
+<div class="done" id="done">✓ Test video live on Canopy! <a href="index.html">Watch it →</a></div>
+
+<canvas id="c" width="1280" height="720"></canvas>
 
 <script>
 const SB_URL = 'https://yddfumooqyvukasfsygh.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkZGZ1bW9vcXl2dWthc2ZzeWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODY1NTcsImV4cCI6MjEwMTM2MjU1N30.okmglJ8O-5jdRPfA7eIf4d4nin27pS3t8O8yPNmbopA';
 
-const log = document.getElementById('log');
-const prog = document.getElementById('prog');
-const status = document.getElementById('status');
+const log = t => {
+  const el = document.getElementById('log');
+  el.textContent = el.textContent === 'Waiting for upload...' ? t : el.textContent + '\n' + t;
+  el.scrollTop = el.scrollHeight;
+};
+const setBar = p => { document.getElementById('bar').style.width = p + '%'; document.getElementById('status').textContent = p + '% — ' + (p < 100 ? 'working...' : 'done!'); };
 
-function addLog(msg) {
-  log.textContent = log.textContent === 'Waiting...' ? msg : log.textContent + '\n' + msg;
-  log.scrollTop = log.scrollHeight;
-  console.log(msg);
+function generateVideoBlob(durationSecs = 8) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    // Check MediaRecorder support
+    const mimeTypes = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+    const mime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m));
+    if (!mime) { reject(new Error('MediaRecorder not supported in this browser')); return; }
+    log('Using codec: ' + mime);
+
+    const stream = canvas.captureStream(24);
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 800000 });
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => resolve(new Blob(chunks, { type: mime }));
+    rec.onerror = e => reject(e.error);
+
+    rec.start(100);
+    let frame = 0;
+    const totalFrames = durationSecs * 24;
+
+    const colors = ['#e50914','#e5a00d','#1a3a6e','#2ecc71','#8e44ad'];
+    let colorIdx = 0;
+    let lastColorSwitch = 0;
+
+    function drawFrame() {
+      const t = frame / 24;
+      const progress = frame / totalFrames;
+
+      // Background — animated gradient
+      if (frame - lastColorSwitch > 48) { colorIdx = (colorIdx + 1) % colors.length; lastColorSwitch = frame; }
+      const grad = ctx.createLinearGradient(0, 0, 1280, 720);
+      grad.addColorStop(0, '#080808');
+      grad.addColorStop(0.5 + 0.3 * Math.sin(t * 0.5), colors[colorIdx] + '22');
+      grad.addColorStop(1, '#101010');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1280, 720);
+
+      // Animated circles
+      for (let i = 0; i < 5; i++) {
+        const x = 640 + 300 * Math.cos(t * 0.3 + i * 1.2566);
+        const y = 360 + 200 * Math.sin(t * 0.5 + i * 1.2566);
+        const r = 40 + 20 * Math.sin(t + i);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = colors[i] + '33'; ctx.fill();
+      }
+
+      // Logo text
+      ctx.save();
+      ctx.shadowColor = '#e5a00d'; ctx.shadowBlur = 40;
+      ctx.font = 'bold 120px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#e5a00d';
+      ctx.fillText('CANOPY', 640, 310);
+      ctx.restore();
+
+      // Red O
+      ctx.font = 'bold 120px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // Measure to position red O precisely
+      const fullW = ctx.measureText('CANOPY').width;
+      const preW  = ctx.measureText('CAN').width;
+      const oW    = ctx.measureText('O').width;
+      ctx.fillStyle = '#e50914';
+      ctx.fillText('O', 640 - fullW/2 + preW + oW/2, 310);
+
+      // Subtitle
+      ctx.font = '500 32px sans-serif';
+      ctx.fillStyle = '#a09d96';
+      ctx.fillText('Test Video — Canopy Streaming Platform', 640, 400);
+
+      // Timer
+      ctx.font = '400 22px monospace';
+      ctx.fillStyle = '#333';
+      ctx.textAlign = 'left';
+      ctx.fillText(t.toFixed(1) + 's / ' + durationSecs + '.0s', 30, 40);
+
+      // Progress bar
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(80, 660, 1120, 8);
+      ctx.fillStyle = '#e50914';
+      ctx.fillRect(80, 660, 1120 * progress, 8);
+
+      // Badge
+      ctx.fillStyle = '#e5a00d';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('YoStudios / Canopy 2026', 1250, 40);
+
+      frame++;
+      if (frame < totalFrames) {
+        requestAnimationFrame(drawFrame);
+      } else {
+        rec.stop();
+      }
+    }
+
+    requestAnimationFrame(drawFrame);
+  });
 }
 
-function setProgress(pct) {
-  prog.style.width = pct + '%';
-  status.textContent = pct + '% complete';
+function generateThumbnailBlob() {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  // Draw a clean title card
+  ctx.fillStyle = '#080808'; ctx.fillRect(0, 0, 1280, 720);
+  const grad = ctx.createLinearGradient(0, 0, 1280, 720);
+  grad.addColorStop(0, '#1a0500'); grad.addColorStop(1, '#0a0a1a');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, 1280, 720);
+  ctx.save();
+  ctx.shadowColor = '#e5a00d'; ctx.shadowBlur = 60;
+  ctx.font = 'bold 140px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e5a00d'; ctx.fillText('CANOPY', 640, 300);
+  ctx.restore();
+  ctx.font = 'bold 140px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const fw = ctx.measureText('CANOPY').width;
+  const pw = ctx.measureText('CAN').width;
+  const ow = ctx.measureText('O').width;
+  ctx.fillStyle = '#e50914'; ctx.fillText('O', 640 - fw/2 + pw + ow/2, 300);
+  ctx.font = '500 36px sans-serif'; ctx.fillStyle = '#55524e'; ctx.textAlign = 'center';
+  ctx.fillText('Test Video · 2026', 640, 420);
+
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
 }
 
 function uploadRaw(url, data, contentType, onProgress) {
@@ -56,129 +183,100 @@ function uploadRaw(url, data, contentType, onProgress) {
     xhr.setRequestHeader('Content-Type', contentType);
     xhr.setRequestHeader('x-upsert', 'true');
     if (onProgress) xhr.upload.addEventListener('progress', e => {
-      if (e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100));
+      if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100));
     });
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
       } else {
-        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+        reject(new Error(`Storage ${xhr.status}: ${xhr.responseText}`));
       }
     };
     xhr.onerror = () => reject(new Error('Network error'));
-    // SEND RAW BYTES — same as upload.html
-    xhr.send(data);
+    xhr.send(data); // RAW BYTES — same as upload.html
   });
 }
 
-async function runUpload() {
-  document.getElementById('btn').disabled = true;
-  log.textContent = '';
-
-  const id = crypto.randomUUID();
-  addLog(`Video ID: ${id}`);
+async function run() {
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = 'Working...';
+  document.getElementById('log').textContent = '';
 
   try {
-    // Step 1: Fetch the test video from a reliable CDN
-    addLog('Step 1: Fetching test video (Big Buck Bunny clip)...');
-    setProgress(5);
+    const id = crypto.randomUUID();
+    log('Video ID: ' + id);
 
-    // Use a CORS-friendly public domain MP4
-    const videoResp = await fetch('https://www.w3schools.com/html/mov_bbb.mp4');
-    if (!videoResp.ok) throw new Error('Could not fetch test video');
-    const videoBlob = await videoResp.blob();
-    addLog(`Video fetched: ${(videoBlob.size/1024).toFixed(0)} KB, type: ${videoBlob.type}`);
-    setProgress(20);
+    // Step 1 — Generate video in browser via Canvas + MediaRecorder
+    log('Step 1: Generating video in browser (8 seconds of frames)...');
+    setBar(5);
+    const videoBlob = await generateVideoBlob(8);
+    log(`Video generated: ${(videoBlob.size / 1024).toFixed(0)} KB, type: ${videoBlob.type}`);
+    setBar(30);
 
-    // Step 2: Fetch a thumbnail
-    addLog('Step 2: Fetching thumbnail...');
-    const thumbResp = await fetch('https://peach.blender.org/wp-content/uploads/bbb-splash.png').catch(() => null);
-    let thumbBlob = null;
-    if (thumbResp && thumbResp.ok) {
-      thumbBlob = await thumbResp.blob();
-      addLog(`Thumbnail fetched: ${(thumbBlob.size/1024).toFixed(0)} KB`);
-    } else {
-      addLog('Thumbnail fetch skipped (CORS) — will use null');
-    }
-    setProgress(30);
+    // Step 2 — Generate thumbnail
+    log('Step 2: Generating thumbnail from canvas...');
+    const thumbBlob = await generateThumbnailBlob();
+    log(`Thumbnail generated: ${(thumbBlob.size / 1024).toFixed(0)} KB`);
+    setBar(35);
 
-    // Step 3: Upload video to Supabase Storage (RAW BYTES — same as upload.html)
-    addLog('Step 3: Uploading video to Supabase Storage...');
-    const videoUpload = await uploadRaw(
-      `${SB_URL}/storage/v1/object/canopy-videos/videos/${id}.mp4`,
+    // Determine extension from mime
+    const ext = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+
+    // Step 3 — Upload video (raw bytes XHR — same method as upload.html)
+    log(`Step 3: Uploading video to Supabase Storage as ${ext}...`);
+    const vidResult = await uploadRaw(
+      `${SB_URL}/storage/v1/object/canopy-videos/videos/${id}.${ext}`,
       videoBlob,
-      videoBlob.type || 'video/mp4',
-      pct => setProgress(30 + Math.round(pct * 0.5))
+      videoBlob.type,
+      pct => setBar(35 + Math.round(pct * 0.45))
     );
-    addLog(`Video storage result: ${JSON.stringify(videoUpload)}`);
-    setProgress(80);
+    log('Video storage result: ' + JSON.stringify(vidResult));
+    setBar(80);
+    const videoUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/videos/${id}.${ext}`;
 
-    const videoUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/videos/${id}.mp4`;
+    // Step 4 — Upload thumbnail (raw bytes)
+    log('Step 4: Uploading thumbnail...');
+    await uploadRaw(
+      `${SB_URL}/storage/v1/object/canopy-videos/thumbnails/${id}.jpg`,
+      thumbBlob,
+      'image/jpeg',
+      null
+    );
+    const thumbUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/thumbnails/${id}.jpg`;
+    log('Thumbnail uploaded');
+    setBar(88);
 
-    // Step 4: Upload thumbnail if we have it
-    let thumbUrl = null;
-    if (thumbBlob) {
-      addLog('Step 4: Uploading thumbnail...');
-      await uploadRaw(
-        `${SB_URL}/storage/v1/object/canopy-videos/thumbnails/${id}.jpg`,
-        thumbBlob,
-        'image/jpeg',
-        null
-      ).catch(e => addLog('Thumb upload failed (non-fatal): ' + e.message));
-      thumbUrl = `${SB_URL}/storage/v1/object/public/canopy-videos/thumbnails/${id}.jpg`;
-      addLog('Thumbnail uploaded');
-    }
-    setProgress(90);
-
-    // Step 5: Insert metadata row (same as upload.html REST POST)
-    addLog('Step 5: Inserting metadata into canopy_videos...');
+    // Step 5 — Insert metadata row (same REST POST as upload.html)
+    log('Step 5: Inserting metadata into canopy_videos...');
     const row = {
-      id,
-      title: 'Canopy Test Video',
-      description: 'Big Buck Bunny short clip — public domain test video to verify the Canopy upload pipeline works end to end.',
-      genre: 'Animation',
-      content_type: 'short',
-      release_year: 2008,
-      runtime_minutes: 1,
-      director: 'Sacha Goedegebure',
-      studio: 'Blender Foundation',
-      country: 'Netherlands',
-      language: 'English',
-      content_rating: 'G',
-      visibility: 'public',
-      price: 0,
-      tags: ['test', 'canopy', 'big-buck-bunny', 'animation', 'public-domain'],
-      cast_members: [],
-      video_url: videoUrl,
-      thumbnail_url: thumbUrl,
+      id, title: 'Canopy Test Video',
+      description: 'A browser-generated test video to verify the Canopy upload pipeline. Created with Canvas + MediaRecorder. 8 seconds, 1280x720.',
+      genre: 'Other', content_type: 'short',
+      release_year: 2026, runtime_minutes: 1,
+      director: 'Canopy', studio: 'YoStudios', country: 'USA', language: 'English',
+      content_rating: 'G', visibility: 'public', price: 0,
+      tags: ['test', 'canopy', 'demo'],
+      cast_members: [], video_url: videoUrl, thumbnail_url: thumbUrl,
       status: 'ready',
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
-
     const metaResp = await fetch(`${SB_URL}/rest/v1/canopy_videos`, {
       method: 'POST',
-      headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(row)
     });
     const metaResult = await metaResp.json();
-    if (!metaResp.ok) throw new Error('Metadata insert failed: ' + JSON.stringify(metaResult));
-    addLog(`Metadata inserted: ${metaResult[0]?.id}`);
-    addLog(`Video URL: ${videoUrl}`);
-    setProgress(100);
-    status.textContent = 'Upload complete!';
+    if (!metaResp.ok) throw new Error('Metadata insert: ' + JSON.stringify(metaResult));
+    log('Metadata inserted: ' + (metaResult[0]?.id || 'ok'));
+    log('Video URL: ' + videoUrl);
+    setBar(100);
     document.getElementById('done').style.display = 'block';
 
   } catch(e) {
-    addLog(`ERROR: ${e.message}`);
-    status.textContent = 'Upload failed — see log';
-    document.getElementById('btn').disabled = false;
-    document.getElementById('btn').textContent = '↺ Retry';
+    log('ERROR: ' + e.message);
+    document.getElementById('status').textContent = 'Failed — see log above';
+    btn.disabled = false; btn.textContent = '↺ Retry';
   }
 }
 </script>
